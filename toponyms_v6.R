@@ -1,5 +1,3 @@
-# etwas
-
 ### Authors: Søren Wichmann and Lennart Chevalier 
 # This script contains the following functions
 # top(): displays maps of toponyms given one or more strings that are part
@@ -244,5 +242,3 @@ stg <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, rat = .
 
 
 # files were downloaded from https://download.geonames.org/export/dump/
-
-# test test
