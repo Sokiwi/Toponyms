@@ -1,6 +1,3 @@
-# Hello COSMOS and world
-# and here the boss himself writes smth
-# and the co-author
 
 ### Authors: Søren Wichmann and Lennart Chevalier 
 # This script contains the following functions
