@@ -1,3 +1,4 @@
+# test
 ### Authors: Søren Wichmann and Lennart Chevalier 
 # This script contains the following functions
 # top(): displays maps of toponyms given one or more strings that are part
