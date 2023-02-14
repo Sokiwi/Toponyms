@@ -1,3 +1,7 @@
+# Hello COSMOS and world
+# and here the boss himself writes smth
+
+
 ### Authors: Søren Wichmann and Lennart Chevalier 
 # This script contains the following functions
 # top(): displays maps of toponyms given one or more strings that are part
@@ -7,7 +11,6 @@
 #   a map using simple_map()
 # stg(): stands for Slavic toponyms in Germany; outputs candidates based on the length of a string
 #   and a ratio of east-to-west occurrences
-# Hello COSMOS and world
 # see country abbreviations at the end of the script
 
 # install packages if missing
