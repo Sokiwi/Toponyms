@@ -1,6 +1,6 @@
 # Hello COSMOS and world
 # and here the boss himself writes smth
-# and here the co-author
+# and the co-author
 
 ### Authors: Søren Wichmann and Lennart Chevalier 
 # This script contains the following functions
@@ -247,5 +247,4 @@ stg <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, rat = .
 
 # files were downloaded from https://download.geonames.org/export/dump/
 
-
-
+# test test
