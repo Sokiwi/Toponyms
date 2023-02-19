@@ -1,5 +1,4 @@
-# test
-### Authors: Søren Wichmann and Lennart Chevalier 
+### Authors: Søren Wichmann and Lennart Chevallier 
 # This script contains the following functions
 # top(): displays maps of toponyms given one or more strings that are part
 #   of the name and one or more countries
@@ -9,13 +8,6 @@
 # stg(): stands for Slavic toponyms in Germany; outputs candidates based on the length of a string
 #   and a ratio of east-to-west occurrences
 # see country abbreviations at the end of the script
-
-# install packages if missing
-packages = c("tidyverse", "maptools", "rgeos", "sf", "rnaturalearth", "rgdal")
-install.packages(setdiff(packages, rownames(installed.packages())))
-
-# load all packages
-lapply(packages, require, character.only = TRUE)
 
 ## calling functions
 # function definition: top()
@@ -30,19 +22,19 @@ lapply(packages, require, character.only = TRUE)
 # red, so if you just want Germany you can run it like this
 # top("by$")
 
-top <- function(strings, countries="DE", color=rainbow(length(countries)), df = TRUE, csv = FALSE, plot = FALSE) {
+top <- function(strings, countries="DE", color=rainbow(length(countries)), df = TRUE, csv = FALSE, plot = FALSE, ratio_string = "") {
   gn <- read.files(countries)  # stands for geonames
   coors <- get.coordinates(gn, strings, df, csv)
-	simple_map(coors[[1]], coors[[2]], coors[[3]], color, strings, plot)
+	simple_map(coors[[1]], coors[[2]], coors[[3]], color, strings, plot, ratio_string)
 }
 
 # function definiton stg.maps()
 # stands for create Slavic toponyms in Germany maps
 # extracts 
-stg.maps <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, df = FALSE, csv = TRUE){
-	dat <- stg(countries, count, lon, lat, len)
-	for(i in 1:length(dat)) {
-		top(dat[i], countries, color=rainbow(length(countries)), df, csv, plot = TRUE)
+stg.maps <- function(countries="DE", count = 10, len = 3, df = FALSE, csv = TRUE, rat = .5){
+	dat <- stg(countries, count, len, rat)
+	for(i in 1:length(dat$ending)) {
+		top(dat$ending[i], countries, color=rainbow(length(countries)), df, csv, plot = TRUE, ratio_string = dat$ratio[i])
 	}
 }
 
@@ -51,6 +43,15 @@ stg.maps <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, df
 # this following function reads the geonames files for the relevant countries
 # but only if they have not already been read earlier in the session
 read.files <- function(countries) {
+  
+  # install packages if missing
+  packages = c("tidyverse", "maptools", "rgeos", "sf", "rnaturalearth", "rgdal", "grDevices", "sp")
+  install.packages(setdiff(packages, rownames(installed.packages())))
+  
+  # load all packages
+  lapply(packages, require, character.only = TRUE)
+  
+  
 	L <- list()
 	for (i in 1:length(countries)) {
 		if ( tolower(countries[i]) %in% ls(envir = .GlobalEnv) == FALSE ) {
@@ -117,7 +118,7 @@ get.coordinates <- function(gn, strings, df, csv) {
 # but the function will install them for you if you
 # don't have them
 # can be run as simple_map(lats, lons)
-simple_map <- function(x, y, cc, color, strings, plot) {
+simple_map <- function(x, y, cc, color, strings, plot, ratio_string) {
 	suppressMessages(library(maptools))
 	nas <- unique(which(is.na(x)), which(is.na(y)))
 	if ( length(nas) > 0 ) {
@@ -147,14 +148,16 @@ simple_map <- function(x, y, cc, color, strings, plot) {
 #		if (lng_range[i] < -180) {lng_range[i] <- -180}
 #	}
 	map <- ne_countries(scale = 50, returnclass = "sf")
-
+	
+	# creates plot
 	p <- ggplot() +
 	  geom_sf(data = map) +
 	  geom_point(data = md, mapping = aes(x = md[,2], y = md[,1], col = md[,3])) + 
 	  coord_sf(xlim=c(min(lng_range), max(lng_range)),
 	           ylim=c(min(lat_range), max(lat_range))) +
 	  scale_color_manual(values = color) +
-	  labs(x = "longitude", y = "latitude", color = "country", title = paste(strings, collapse = " "))
+	  labs(x = "longitude", y = "latitude", color = "country", title = paste(strings, ratio_string, collapse = " "))
+	
 	
 	# saves or prints plot
 	if (plot == TRUE) {
@@ -168,7 +171,7 @@ simple_map <- function(x, y, cc, color, strings, plot) {
 }
 
 # function definition: stg(), stands for (candidates for) Slavic toponyms in Germany
-stg <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, rat = .5) {
+stg <- function(countries="DE", count = 10, len = 3, rat = .5) {
 	gn <- read.files(countries)
   
 	# query all endings from the dataset
@@ -193,19 +196,27 @@ stg <- function(countries="DE", count = 10, lon = 10, lat = 50, len = 3, rat = .
 		lat_strings[[i]] <- gn$rlatitude[endings_ID_o[[i]]]
 		lon_strings[[i]] <- gn$rlongitude[endings_ID_o[[i]]]
 		# country[[i]] <- gn$rcountry_code[endings_ID_o[[i]]]
+		
+		# store coordinates of the polygon
+		lons <- c(10.144314,10.0399439 ,10.5178491 ,11.3143579 ,11.8746607 ,11.8087427 ,11.6274683 ,11.5450708 ,11.7757837 ,11.6659204 ,10.2140419 ,9.917411 ,9.8075477 ,10.6919471 ,12.8617469 ,14.9821083 ,15.5204383 ,14.6964637 ,13.8834755 ,12.9496376 ,11.6202919 ,11.1039344 ,10.144314)
+		lats <- c(54.3227499 ,53.5107333 ,53.324126 ,53.0476312 ,52.8755735 ,52.5928491 ,52.2377021 ,52.0826909 ,51.9389938 ,51.764248 ,51.0454903 ,50.8031092 ,50.2724411 ,49.8067462 ,49.7499912 ,50.2408327 ,51.6459284 ,53.9825363 ,54.6235699 ,54.7378977 ,54.4323074 ,54.5790222, 54.3227499)
+		
+		
     
 		# logical vectors storing if each place is within the given area
-		loc_log[[i]] <- lon_strings[[i]] >= lon & lat_strings[[i]] >= lat
+		loc_log[[i]] <- as.logical(point.in.polygon(lon_strings[[i]], lat_strings[[i]], lons, lats))
 		# percentage of places which are in the area
 		ratio[[i]] <- sum(loc_log[[i]])/length(loc_log[[i]])
     
-		# select only endings with over 50%
+		# select only endings which surpass parameter rat
 		if (ratio[[i]]>rat) { 
-			dat[[i]] <- endings_o[i]
+			dat[[i]] <- cbind(endings_o[i], paste0(round(ratio[[i]], 4)*100, "%"))
 		}
 	}
   
-	dat <- unlist(dat)
+	dat <- as.data.frame(cbind(unlist(dat)[c(TRUE, FALSE)], unlist(dat)[c(FALSE, TRUE)]))
+	colnames(dat) <- c("ending", "ratio")
+	
 	dat_name <- paste0("data_top_", count)
 	assign(dat_name, dat, envir = .GlobalEnv)
 	cat(paste("\nDataframe",dat_name ,"saved in global environment.\n"))
