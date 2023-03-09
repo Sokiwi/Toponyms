@@ -22,10 +22,10 @@
 # red, so if you just want Germany you can run it like this
 # top("by$")
 
-top <- function(strings, countries="DE", color=rainbow(length(countries)), df = TRUE, csv = FALSE, plot = FALSE, ratio_string = "") {
+top <- function(strings, countries="DE", color=rainbow(length(countries)), df = TRUE, csv = FALSE, plot = FALSE, ratio_string = "", fq = "") {
   gn <- read.files(countries)  # stands for geonames
   coors <- get.coordinates(gn, strings, df, csv)
-	simple_map(coors[[1]], coors[[2]], coors[[3]], color, strings, plot, ratio_string)
+	simple_map(coors[[1]], coors[[2]], coors[[3]], color, strings, plot, ratio_string, fq)
 }
 
 # function definiton stg.maps()
@@ -34,7 +34,7 @@ top <- function(strings, countries="DE", color=rainbow(length(countries)), df = 
 stg.maps <- function(countries="DE", count = 10, len = 3, df = FALSE, csv = TRUE, rat = .5){
 	dat <- stg(countries, count, len, rat)
 	for(i in 1:length(dat$ending)) {
-		top(dat$ending[i], countries, color=rainbow(length(countries)), df, csv, plot = TRUE, ratio_string = dat$ratio[i])
+		top(dat$ending[i], countries, color=rainbow(length(countries)), df, csv, plot = TRUE, ratio_string = dat$ratio[i], fq = dat$frequency[i])
 	}
 }
 
@@ -118,7 +118,7 @@ get.coordinates <- function(gn, strings, df, csv) {
 # but the function will install them for you if you
 # don't have them
 # can be run as simple_map(lats, lons)
-simple_map <- function(x, y, cc, color, strings, plot, ratio_string) {
+simple_map <- function(x, y, cc, color, strings, plot, ratio_string, fq) {
 	suppressMessages(library(maptools))
 	nas <- unique(which(is.na(x)), which(is.na(y)))
 	if ( length(nas) > 0 ) {
@@ -156,9 +156,10 @@ simple_map <- function(x, y, cc, color, strings, plot, ratio_string) {
 	  coord_sf(xlim=c(min(lng_range), max(lng_range)),
 	           ylim=c(min(lat_range), max(lat_range))) +
 	  scale_color_manual(values = color) +
-	  labs(x = "longitude", y = "latitude", color = "country", title = paste(strings, ratio_string, collapse = " "))
+	  labs(x = "longitude", y = "latitude", color = "country", title = paste(strings, length(md[,1]))) +
+	  {if(nchar(ratio_string) > 0 && nchar(fq) > 0)labs(title = paste(strings, ratio_string, fq, collapse = " "))}
 	
-	
+
 	# saves or prints plot
 	if (plot == TRUE) {
     plot_name <- paste0("plot_", paste(regmatches(strings, regexpr("[a-zA-Z]+", strings)), collapse = "_"),".png", collapse="_")
@@ -189,6 +190,16 @@ stg <- function(countries="DE", count = 10, len = 3, rat = .5) {
 	ratio <- list()
 	dat <- list()
   
+	
+	# store coordinates of the polygon in a df
+	lons <- c(10.144314,10.0399439 ,10.5178491 ,11.3143579 ,11.8746607 ,11.8087427 ,11.6274683 ,11.5450708 ,11.7757837 ,11.6659204 ,10.2140419 ,9.917411 ,9.8075477 ,10.6919471 ,12.8617469 ,14.9821083 ,15.5204383 ,14.6964637 ,13.8834755 ,12.9496376 ,11.6202919 ,11.1039344 ,10.144314)
+	lats <- c(54.3227499 ,53.5107333 ,53.324126 ,53.0476312 ,52.8755735 ,52.5928491 ,52.2377021 ,52.0826909 ,51.9389938 ,51.764248 ,51.0454903 ,50.8031092 ,50.2724411 ,49.8067462 ,49.7499912 ,50.2408327 ,51.6459284 ,53.9825363 ,54.6235699 ,54.7378977 ,54.4323074 ,54.5790222, 54.3227499)
+	pol  <- data.frame(X = lons, Y = lats) 
+	# chull function from package grDevices
+	pos <- chull(pol)
+	con.hull <- rbind(pol[pos,],pol[pos[1],])   # convex hull 
+	
+	
 	for (i in 1:count) {
 		# stores indices of all ordered endings  
 		endings_ID_o[[i]] <- unique(grep(endings_o[i], gn$name))
@@ -197,25 +208,20 @@ stg <- function(countries="DE", count = 10, len = 3, rat = .5) {
 		lon_strings[[i]] <- gn$rlongitude[endings_ID_o[[i]]]
 		# country[[i]] <- gn$rcountry_code[endings_ID_o[[i]]]
 		
-		# store coordinates of the polygon
-		lons <- c(10.144314,10.0399439 ,10.5178491 ,11.3143579 ,11.8746607 ,11.8087427 ,11.6274683 ,11.5450708 ,11.7757837 ,11.6659204 ,10.2140419 ,9.917411 ,9.8075477 ,10.6919471 ,12.8617469 ,14.9821083 ,15.5204383 ,14.6964637 ,13.8834755 ,12.9496376 ,11.6202919 ,11.1039344 ,10.144314)
-		lats <- c(54.3227499 ,53.5107333 ,53.324126 ,53.0476312 ,52.8755735 ,52.5928491 ,52.2377021 ,52.0826909 ,51.9389938 ,51.764248 ,51.0454903 ,50.8031092 ,50.2724411 ,49.8067462 ,49.7499912 ,50.2408327 ,51.6459284 ,53.9825363 ,54.6235699 ,54.7378977 ,54.4323074 ,54.5790222, 54.3227499)
-		
-		
-    
 		# logical vectors storing if each place is within the given area
-		loc_log[[i]] <- as.logical(point.in.polygon(lon_strings[[i]], lat_strings[[i]], lons, lats))
+		loc_log[[i]] <- as.logical(point.in.polygon(lon_strings[[i]], lat_strings[[i]], con.hull$X, con.hull$Y))
 		# percentage of places which are in the area
 		ratio[[i]] <- sum(loc_log[[i]])/length(loc_log[[i]])
     
 		# select only endings which surpass parameter rat
 		if (ratio[[i]]>rat) { 
-			dat[[i]] <- cbind(endings_o[i], paste0(round(ratio[[i]], 4)*100, "%"))
+			dat[[i]] <- cbind(endings_o[i], paste0(round(ratio[[i]], 4)*100, "%"),
+			                  paste0(sum(loc_log[[i]]),"/", length(loc_log[[i]])))
 		}
 	}
   
-	dat <- as.data.frame(cbind(unlist(dat)[c(TRUE, FALSE)], unlist(dat)[c(FALSE, TRUE)]))
-	colnames(dat) <- c("ending", "ratio")
+	dat <- as.data.frame(cbind(unlist(dat)[c(TRUE, FALSE, FALSE)], unlist(dat)[c(FALSE, TRUE, FALSE)], unlist(dat)[c(FALSE, FALSE, TRUE)]))
+	colnames(dat) <- c("ending", "ratio", "frequency")
 	
 	dat_name <- paste0("data_top_", count)
 	assign(dat_name, dat, envir = .GlobalEnv)
